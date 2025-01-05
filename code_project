@@ -1,0 +1,98 @@
+import cv2 as cv
+import random
+import math
+import time
+
+dirCascadeFiles = r'C:\Users\clara\Documents\Bruxelles\Labo_image\Projet\opencv-3.4\data\haarcascades_cuda\\'
+classCascadeFacial = cv.CascadeClassifier(dirCascadeFiles + "haarcascade_frontalface_default.xml")
+
+def detectionVisageEtCercle(img, cascade):
+    copie = img.copy()
+    gris = cv.cvtColor(copie, cv.COLOR_BGR2GRAY)
+    visages = cascade.detectMultiScale(gris, 1.1, 5, minSize=(30,30))
+    cercles = []
+    for (x,y,w,h) in visages:
+        cx = x + w//2
+        cy = y + h//2
+        rayon = min(w,h)//3
+        cercles.append((cx, cy, rayon))
+        cv.circle(copie, (cx, cy), rayon, (255,0,0), 2)
+    return copie, cercles
+
+def genererCarre():
+    x = random.randint(0,600)
+    taille = random.randint(30,50)
+    return [x,0,taille]
+
+def jeuDetection(cascade):
+    capture = cv.Videocaptureture(0)
+    carres = []
+    vitesse = 5
+    score = 0
+    tempsDepart = time.time()
+    dernierTempsAugmentation = 0
+    game_over = False
+    
+    if not capture.isOpened():
+        print("Pas de webcam")
+        return
+    
+    while True:
+        ret, frame = capture.read()
+        if not ret:
+            print("Pas d'image")
+            break
+        frame = cv.flip(frame,1)
+        frameVisage, cercles = detectionVisageEtCercle(frame,cascade)
+        
+        if random.randint(1,20) == 1:
+            carres.append(genererCarre())
+        
+        for carre in carres:
+            carre[1] += vitesse
+        
+        for carre in carres:
+            x,y,taille = carre
+            for (cx,cy,r) in cercles:
+                distance = math.sqrt((x+taille/2 - cx)**2 + (y+taille/2 - cy)**2)
+                if distance < r:
+                    game_over = True
+        
+        carresout = [c for c in carres if c[1]>=480]
+        score += len(carresout)
+        carres = [c for c in carres if c[1]<480]
+        
+        for (x,y,taille) in carres:
+            cv.rectangle(frameVisage,(x,y),(x+taille,y+taille),(0,0,255),-1)
+        
+        tempsEcoule = time.time() - tempsDepart
+        cv.putText(frameVisage,f"Score: {score}",(10,30),cv.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
+        cv.putText(frameVisage,f"Speed: {vitesse}",(10,60),cv.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
+        
+        temps = int(tempsEcoule)
+        if temps%10==0 and temps!=0:
+            if temps!=dernierTempsAugmentation:
+                vitesse += 5
+                dernierTempsAugmentation = temps
+        
+        if game_over:
+            cv.putText(frameVisage,"GAME OVER",(150,300),cv.FONT_HERSHEY_SIMPLEX,2,(0,0,255),3)
+            cv.imshow("Webcam",frameVisage)
+            cv.waitKey(2000)
+            carres.clear()
+            vitesse = 5
+            score = 0
+            tempsDepart = time.time()
+            dernierTempsAugmentation = 0
+            game_over = False
+            continue
+        
+        cv.imshow("Webcam",frameVisage)
+        touche = cv.waitKey(20)
+        if touche==27:
+            break
+    
+    capture.release()
+    cv.destroyAllWindows()
+
+jeuDetection(classCascadeFacial)
