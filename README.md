@@ -9,7 +9,7 @@ Main idea:
 
 Features
 
-    Face detection: uses a Haar Cascade classifier (e.g., haarcascade_frontalface_default.xml).
+    Face detection: uses a Haar Cascade classifier (haarcascade_frontalface_default.xml).
     Real-time display: uses the webcam with cv.VideoCapture.
     Obstacles: squares are randomly generated and fall at an adjustable speed.
     Scoring: the score increments when a square exits the screen without colliding with your head.
